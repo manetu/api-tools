@@ -1,0 +1,97 @@
+#!/usr/bin/env bb
+
+(require '[babashka.deps :as deps])
+
+(deps/add-deps '{:deps {medley/medley {:mvn/version "1.3.0"}
+                        doric/doric {:mvn/version "0.9.0"}
+                        environ/environ {:mvn/version "1.2.0"}}})
+
+(require '[clojure.java.shell :refer [sh]])
+(require '[medley.core :as m])
+(require '[clojure.tools.cli :refer [parse-opts]])
+(require '[clojure.string :as string])
+(require '[taoensso.timbre :as log])
+(require '[doric.core :refer [table]])
+(require '[environ.core :refer [env]])
+
+(log/set-level! :info)
+
+(defn sparql-query [{:keys [show output update] :as options}]
+  (let [expr (slurp *in*)
+        escaped-expr (-> expr (string/replace #"\s+" " ") (string/trim))
+        gql (if (some? update)
+              [:update_provider_attributes {:label update :sparql_expr escaped-expr}]
+              [:query_provider_attributes {:sparql_expr escaped-expr} [:name :value]])
+        command (-> [(env :manetu-graphql-cli "manetu-graphql-cli")]
+                    (cond-> (some? update) (conj "-m"))
+                    (concat [:in (pr-str gql)]))]
+    (when show
+      (binding [*out* *err*]
+        (println "====================== SPARQL ========================")
+        (println expr)
+        (println "====================== RESULTS =======================")))
+    (log/debug "query:" gql)
+    (log/debug "command:" (pr-str command))
+    (let [{:keys [exit out err] :as r} (apply sh command)]
+      (log/debug "result:" r)
+      (if (zero? exit)
+        (let [result (json/parse-string out true)
+              errors (some-> result :errors)
+              data (mapv (fn [x] (reduce (fn [acc {:keys [name value]}] (assoc acc (string/replace name #"^\?" "") value)) {} x))
+                         (some-> result :data :query_provider_attributes))]
+          (when (some? errors)
+            (log/error errors))
+          (log/debug "data:" data)
+          (println (case output
+                     :json (json/generate-string data)
+                     :table (table (-> data first keys) data))))
+        (do
+          (when (some? err)
+            (log/error err)
+            (println out)))))))
+
+(defn exit [status msg & args]
+  (apply println msg args)
+  (System/exit status))
+
+(defn prep-usage [msg] (->> msg flatten (string/join \newline)))
+
+(defn usage [options-summary]
+  (prep-usage ["Usage: manetu-sparql-cli [options]"
+               ""
+               "Options:"
+               options-summary]))
+
+(def output-types #{:json :table})
+(defn print-output-types []
+    (str "[" (string/join ", " (map name output-types)) "]"))
+(def output-types-description
+    (str "Select the output-types from " (print-output-types)))
+
+(def options
+  [["-h" "--help"]
+   [nil "--update VAULTLABEL"]
+   ["-s" "--show" "Display the SPARQL query"]
+   ["-o" "--output TYPE" output-types-description
+    :default :json
+    :parse-fn keyword
+    :validate [output-types (str "Must be one of " (print-output-types))]]])
+   
+(let [{{:keys [help] :as options} :options :keys [errors summary]} (parse-opts *command-line-args* options)]
+  (cond
+
+    help
+    (exit 0 (usage summary))
+
+    (not= errors nil)
+    (exit -1 "Error: " (string/join errors))
+
+    :else
+    (try
+      (sparql-query options)
+      (catch Exception e
+        (exit -1 (ex-message e))))))
+
+;; Local Variables:
+;; eval: (clojure-mode)
+;; End:
