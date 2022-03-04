@@ -14,7 +14,10 @@ A set of tools helpful in interacting with the Manetu Control Plane
 make install
 ```
 
-### Set an authorization token in MANETU_TOKEN
+### Set the following environment variables
+
+- **MANETU_TOKEN**: A personal access token to the Manetu Platform
+- **MANETU_GRAPHQL_URL**: A URL pointing to the Manetu Platform instance, e.g. https://test.manetu.io/graphql
 
 ``` bash
 export MANETU_TOKEN=<your token here>
@@ -40,7 +43,7 @@ Generally speaking, the tool accepts graphql queries in [district0x](https://git
 ##### Query
 
 ``` bash
-$ echo '[:search {:term "Ellen"}  [:name :email]]' | ./manetu-graphql-cli | jq .data.search
+$ echo '[:search {:term "Ellen"}  [:name :email]]' | manetu-graphql-cli | jq .data.search
 [
   {
     "name": "Ellen Cabane",
@@ -54,7 +57,7 @@ $ echo '[:search {:term "Ellen"}  [:name :email]]' | ./manetu-graphql-cli | jq .
 Add the -m switch
 
 ``` bash
-$ echo '[:create_iam_group {:name "test" :description "test" :mrn_roles ["mrn:iam:manetu.io:role:admin"]}] ' | ./manetu-graphql-cli -m -u http://manetu.haskins.net/graphql | jq .data
+$ echo '[:create_iam_group {:name "test" :description "test" :mrn_roles ["mrn:iam:manetu.io:role:admin"]}] ' | manetu-graphql-cli -m | jq .data
 {
   "create_iam_group": "mrn:iam:piedpiper:group:ca3bbda6-9d97-46fb-94df-b9be1477dc4e"
 }
@@ -63,12 +66,14 @@ $ echo '[:create_iam_group {:name "test" :description "test" :mrn_roles ["mrn:ia
 ### manetu-sparql-cli
 
 ``` bash
-$ ./manetu-sparql-cli -h
-Usage: graphcli [options]
+$ manetu-sparql-cli -h
+Usage: manetu-sparql-cli [options]
 
 Options:
   -h, --help
-  --update VAULTLABEL
+      --update VAULTLABEL
+  -s, --show                      Display the SPARQL query
+  -o, --output TYPE        :json  Select the output-types from [table, json]
 ```
 
 #### Examples
