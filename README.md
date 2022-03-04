@@ -19,10 +19,6 @@ make install
 - **MANETU_TOKEN**: A personal access token to the Manetu Platform
 - **MANETU_GRAPHQL_URL**: A URL pointing to the Manetu Platform instance, e.g. https://test.manetu.io/graphql
 
-``` bash
-export MANETU_TOKEN=<your token here>
-```
-
 ## Usage
 
 ### manetu-graphql-cli
