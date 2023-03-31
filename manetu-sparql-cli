@@ -68,10 +68,20 @@
 (def output-types-description
     (str "Select the output-types from " (print-output-types)))
 
+(def log-level-types '(:trace :debug :info :warn :error :fatal :report))
+(defn print-log-level-types []
+  (str "[" (string/join ", " (map name log-level-types)) "]"))
+(def output-log-level-types-description
+  (str "Select the output-types from " (print-log-level-types)))
+
 (def options
   [["-h" "--help"]
    [nil "--update VAULTLABEL"]
    ["-s" "--show" "Display the SPARQL query"]
+   ["-l" "--log-level LEVEL" output-log-level-types-description
+    :default :info
+    :parse-fn keyword
+    :validate [(set log-level-types) (str "Must be one of " (print-log-level-types))]]
    ["-o" "--output TYPE" output-types-description
     :default :json
     :parse-fn keyword
@@ -79,16 +89,16 @@
    
 (let [{{:keys [help] :as options} :options :keys [errors summary]} (parse-opts *command-line-args* options)]
   (cond
-
     help
-    (exit 0 (usage summary))
+      (exit 0 (usage summary))
 
     (not= errors nil)
-    (exit -1 "Error: " (string/join errors))
+      (exit -1 "Error: " (string/join errors))
 
     :else
-    (try
-      (sparql-query options)
+      (try
+        (log/set-level! (:log-level options))
+        (sparql-query options)
       (catch Exception e
         (exit -1 (ex-message e))))))
 
