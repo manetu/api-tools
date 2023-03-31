@@ -30,6 +30,7 @@ Usage: graphcli [options]
 Options:
   -h, --help
   -m, --mutation
+  -l, --log-level LEVEL  :info  Select the output-types from [trace, debug, info, warn, error, fatal, report]
 ```
 
 Generally speaking, the tool accepts graphql queries in [district0x](https://github.com/district0x/graphql-query) [EDN](https://github.com/edn-format/edn) format on stdin and outputs JSON results on stdout
@@ -69,6 +70,7 @@ Options:
   -h, --help
       --update VAULTLABEL
   -s, --show                      Display the SPARQL query
+  -l, --log-level LEVEL    :info  Select the output-types from [trace, debug, info, warn, error, fatal, report]
   -o, --output TYPE        :json  Select the output-types from [table, json]
 ```
 
