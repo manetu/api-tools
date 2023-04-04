@@ -26,16 +26,36 @@
     (assoc params :basic-auth [nil token])
     (throw (ex-info "MANETU_TOKEN must be set" {}))))
 
+(defn quote-non-option
+    "return a quoted argument if it is not an option (i.e. does not begin with a '-')"
+    [option]
+    (if (= \- (get option 0))
+        option
+        (str "'" option "'" ) ))
+
+(defn trace-or-debug?
+    []
+    (contains? #{:debug :trace} (:min-level log/*config*)))
+
+(defn stringify-command
+    "Turn the curl command list into a string"
+    [command-list]
+    (if (nil? command-list)
+        command-list
+        (str "curl " (string/join " " (map quote-non-option  (rest command-list))))))
+
 (defn json-post [options query]
   (let [params (with-creds options
                  {:headers {"Accept" "application/json"
                             "Content-Type" "application/json"}
-                  :body (json/generate-string query)})
+                  :body (json/generate-string query)
+                  :debug (trace-or-debug?)})
         url (or (env :manetu-graphql-url)
                 (throw (ex-info "MANETU_GRAPHQL_URL must be set" {})))]
     (log/debug "post" params "to" url)
     (try
       (let [{:keys [body] :as r} (curl/post url params)]
+        (log/debug "command:" (stringify-command (:command r)))
         (log/debug "result:" r)
         (println body))
       (catch Exception e
@@ -91,6 +111,7 @@
     :else
     (try
       (log/set-level! (:log-level options))
+      (log/trace "Log config " log/*config*)
       (graphql! options (edn/read *in*))
       (exit 0 "")
       (catch Exception e
